@@ -1,26 +1,26 @@
-// OJO: NO uses "use admin;" ni "use comerciotech_catalogo;". 
-// Dejamos que Docker maneje el contexto inicial.
+// 1. Conectarse y autenticarse en la base administrativa
+var adminDB = db.getSiblingDB('admin');
+adminDB.auth('admin_root', 'SecretMongo2026*');
 
-// Abre la sesión con los datos fijos del compose en bruto
-db.getSiblingDB('admin').auth('admin_root', 'SecretMongo2026*');
-
-// El resto del script sigue igual para crear el usuario srv_app_comerciotech...
-db = db.getSiblingDB('comerciotech_catalogo');
-db.createUser({
-    user: 'srv_app_comerciotech',
-    pwd: 'Python1!',
-    roles: [{ role: 'readWrite', db: 'comerciotech_catalogo' }]
-});
-db.createCollection('productos');
-
-// Ahora creamos las colecciones directamente en la BD del proyecto
+// 2. Definir la base de datos del proyecto de forma limpia
 var dbProyecto = db.getSiblingDB('comerciotech_catalogo');
 
+// 3. Crear el usuario del servicio para la App de Python con FastAPI
+dbProyecto.createUser({
+    user: 'srv_app_comerciotech',
+    pwd: 'Python1!',
+    roles: [
+        { role: 'readWrite', db: 'comerciotech_catalogo' }
+    ]
+});
+
+// 4. Crear la colección de PRODUCTOS con validador flexible para la Fase Web
 dbProyecto.createCollection("productos", {
    validator: {
       $jsonSchema: {
          bsonType: "object",
-         required: [ "sku", "nombre", "precio", "stock", "categoria", "atributos" ],
+         // 💡 Ajustado: Solo requerimos lo que el formulario web de tu app envía hoy
+         required: [ "sku", "nombre", "precio" ], 
          properties: {
             sku: { bsonType: "string" },
             nombre: { bsonType: "string" },
@@ -33,9 +33,10 @@ dbProyecto.createCollection("productos", {
    }
 });
 
+// Índices para velocidad y unicidad del catálogo
 dbProyecto.productos.createIndex({ sku: 1 }, { unique: true });
-dbProyecto.productos.createIndex({ categoria: 1, precio: 1 });
 
+// 5. Crear la colección de CARRITOS
 dbProyecto.createCollection("carritos", {
    validator: {
       $jsonSchema: {
@@ -66,4 +67,4 @@ dbProyecto.createCollection("carritos", {
 dbProyecto.carritos.createIndex({ usuario_id: 1, estado: 1 }, { unique: true });
 dbProyecto.carritos.createIndex({ actualizado_en: 1 }, { expireAfterSeconds: 1209600 });
 
-print("🔒 ¡Entorno NoSQL inicializado con db.getSiblingDB de forma segura!");
+print("🔒 ¡Entorno NoSQL inicializado con validadores corregidos de forma segura!");

@@ -28,14 +28,12 @@ async def read_index(request: Request):
 async def guardar_producto(
     sku: str = Form(...), 
     nombre: str = Form(...), 
-    precio: float = Form(...)
+    precio: float = Form(...) # FastAPI intentará convertirlo, pero asegurémoslo en el dict
 ):
-    # 💾 ESCRIBIR: Insertamos el nuevo producto directamente en MongoDB
     nuevo_producto = {
         "sku": sku,
         "nombre": nombre,
-        "precio": precio
+        "precio": float(precio) # 👈 Forzar float para cumplir el jsonSchema de Mongo
     }
     productos_collection.insert_one(nuevo_producto)
-    
     return RedirectResponse(url="/", status_code=303)

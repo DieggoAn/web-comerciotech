@@ -1,9 +1,12 @@
-// Se conecta usando el root estricto del compose
-db.getSiblingDB('admin').auth('admin_root', 'SecretMongo2026*');
+// 1. Conectarse y autenticarse en la base administrativa
+var adminDB = db.getSiblingDB('admin');
+adminDB.auth('admin_root', 'SecretMongo2026*');
 
-db = db.getSiblingDB('comerciotech_catalogo');
+// 2. Definir e inicializar la base de datos del proyecto de forma limpia
+var dbProyecto = db.getSiblingDB('comerciotech_catalogo');
 
-db.createUser({
+// 3. Crear el usuario del servicio para la App de Python con FastAPI
+dbProyecto.createUser({
     user: 'srv_app_comerciotech',
     pwd: 'Python1!',
     roles: [
@@ -16,7 +19,6 @@ dbProyecto.createCollection("productos", {
    validator: {
       $jsonSchema: {
          bsonType: "object",
-         // 💡 Ajustado: Solo requerimos lo que el formulario web de tu app envía hoy
          required: [ "sku", "nombre", "precio" ], 
          properties: {
             sku: { bsonType: "string" },

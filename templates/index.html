@@ -47,3 +47,43 @@
                     🔄 Actualizar Tabla
                 </button>
             </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-bold border-b border-gray-200">
+                            <th class="py-3 px-4">SKU</th>
+                            <th class="py-3 px-4">Nombre</th>
+                            <th class="py-3 px-4">Precio</th>
+                            <th class="py-3 px-4 text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% if productos %}
+                            {% for producto in productos %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4 font-mono text-xs font-bold text-blue-600">{{ producto.sku }}</td>
+                                <td class="py-3 px-4 font-medium text-gray-900">{{ producto.nombre }}</td>
+                                <td class="py-3 px-4 font-semibold text-gray-900">${{ producto.precio }}</td>
+                                <td class="py-3 px-4 text-center">
+                                    <form action="/eliminar" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar este producto?');" style="display:inline;">
+                                        <input type="hidden" name="sku" value="{{ producto.sku }}">
+                                        <button type="submit" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded border border-red-200 transition">
+                                            Eliminar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-8 text-gray-400">No hay productos registrados en MongoDB.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

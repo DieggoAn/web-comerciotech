@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates # 👈 ¡CORREGIDO AQUÍ!
+from fastapi.templating import Jinja2Templates
 from pymongo import MongoClient
 import os
 
@@ -18,9 +18,15 @@ async def read_index(request: Request):
     # 🔍 LEER: Traemos todos los productos desde MongoDB reales
     productos_db = list(productos_collection.find())
     productos = []
+    
     for p in productos_db:
-        p["_id"] = str(p["_id"])
-        productos.append(p)
+        # Extraemos campos limpios y explícitos para no arrastrar objetos internos de Mongo a Jinja2
+        item = {
+            "sku": str(p.get("sku", "")),
+            "nombre": str(p.get("nombre", "")),
+            "precio": float(p.get("precio", 0.0))
+        }
+        productos.append(item)
         
     return templates.TemplateResponse("index.html", {"request": request, "productos": productos})
 
@@ -28,12 +34,14 @@ async def read_index(request: Request):
 async def guardar_producto(
     sku: str = Form(...), 
     nombre: str = Form(...), 
-    precio: float = Form(...) # FastAPI intentará convertirlo, pero asegurémoslo en el dict
+    precio: float = Form(...)
 ):
+    # 💾 ESCRIBIR: Insertamos el nuevo producto directamente en MongoDB
     nuevo_producto = {
         "sku": sku,
         "nombre": nombre,
-        "precio": float(precio) # 👈 Forzar float para cumplir el jsonSchema de Mongo
+        "precio": float(precio) # Forzado a float para el jsonSchema estricto de Mongo
     }
     productos_collection.insert_one(nuevo_producto)
+    
     return RedirectResponse(url="/", status_code=303)

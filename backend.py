@@ -27,7 +27,7 @@ async def read_index(request: Request):
             "precio": float(p.get("precio", 0.0))
         }
         productos.append(item)
-        
+        print(productos)
     return templates.TemplateResponse("index.html", {"request": request, "productos": productos})
 
 @app.post("/guardar", response_class=RedirectResponse)

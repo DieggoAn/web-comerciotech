@@ -1,72 +1,80 @@
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
-from pymongo import MongoClient
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComercioTech - Panel de Control del Catálogo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
 
-app = FastAPI()
-
-# 🔌 CONEXIÓN USANDO EL USUARIO ADMINISTRADOR RAÍZ REAL
-MONGO_URI = "mongodb://admin_root:SecretMongo2026*@comerciotech-nosql-v2:27017/?authSource=admin"
-client = MongoClient(MONGO_URI)
-db = client["comerciotech_catalogo"]
-productos_collection = db["productos"]
-
-@app.get("/", response_class=HTMLResponse)
-async def read_index(request: Request):
-    try:
-        productos_db = list(productos_collection.find())
-        tabla_html = ""
-        
-        if not productos_db:
-            tabla_html = '<tr><td colspan="3" class="text-center py-8 text-gray-400">No hay productos en MongoDB.</td></tr>'
-        else:
-            for p in productos_db:
-                tabla_html += f"""
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="py-3 px-4 font-mono text-xs font-bold text-blue-600">{p.get('sku', '')}</td>
-                    <td class="py-3 px-4 font-medium text-gray-900">{p.get('nombre', '')}</td>
-                    <td class="py-3 px-4 font-semibold text-gray-900">${p.get('precio', 0.0)}</td>
-                </tr>
-                """
-    except Exception as e:
-        tabla_html = f'<tr><td colspan="3" class="text-center py-8 text-red-500">Error de Mongo: {str(e)}</td></tr>'
-
-    # Retornamos el HTML directo en bruto sin usar la carpeta templates
-    return f"""
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>ComercioTech - Modo Seguro</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-    </head>
-    <body class="bg-gray-50 text-gray-800 p-8">
-        <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
-            <h1 class="text-2xl font-bold text-blue-950 mb-4">💼 ComercioTech (Modo Seguro Sin Jinja2)</h1>
-            
-            <form action="/guardar" method="POST" class="mb-8 space-y-2 max-w-md">
-                <input type="text" name="sku" placeholder="SKU" required class="w-full p-2 border rounded">
-                <input type="text" name="nombre" placeholder="Nombre" required class="w-full p-2 border rounded">
-                <input type="number" name="precio" step="0.01" placeholder="Precio" required class="w-full p-2 border rounded">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Guardar</button>
-            </form>
-
-            <table class="w-full text-left border">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="p-2">SKU</th><th class="p-2">Nombre</th><th class="p-2">Precio</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {tabla_html}
-                </tbody>
-            </table>
+    <nav class="bg-blue-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wide">💼 ComercioTech <span class="text-blue-300 text-sm font-normal">(Base de Datos Real)</span></h1>
+            <span class="bg-green-600 px-3 py-1 rounded text-xs uppercase font-semibold border border-green-700">Fase 2: MongoDB Conectado</span>
         </div>
-    </body>
-    </html>
-    """
+    </nav>
 
-@app.post("/guardar", response_class=RedirectResponse)
-async def guardar_producto(sku: str = Form(...), nombre: str = Form(...), precio: float = Form(...)):
-    nuevo_producto = {{"sku": sku, "nombre": nombre, "precio": float(precio)}}
-    productos_collection.insert_one(nuevo_producto)
-    return RedirectResponse(url="/", status_code=303)
+    <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 lg:col-span-1">
+            <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                📦 Registrar Producto
+            </h2>
+            <form action="/guardar" method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">SKU (Código Único)</label>
+                    <input type="text" name="sku" required placeholder="Ej: PROD-100" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Nombre Comercial</label>
+                    <input type="text" name="nombre" required placeholder="Ej: Monitor Gamer 24" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Precio ($)</label>
+                    <input type="number" name="precio" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded transition text-sm shadow-sm mt-2">
+                    Guardar en Catálogo Real
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 lg:col-span-2">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-900">📋 Productos en MongoDB</h2>
+                <button onclick="window.location.reload()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded border border-gray-300 transition">
+                    🔄 Actualizar Tabla
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-bold border-b border-gray-200">
+                            <th class="py-3 px-4">SKU</th>
+                            <th class="py-3 px-4">Nombre</th>
+                            <th class="py-3 px-4">Precio</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% if productos %}
+                            {% for producto in productos %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4 font-mono text-xs font-bold text-blue-600">{{ producto.sku }}</td>
+                                <td class="py-3 px-4 font-medium text-gray-900">{{ producto.nombre }}</td>
+                                <td class="py-3 px-4 font-semibold text-gray-900">${{ producto.precio }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center py-8 text-gray-400">No hay productos registrados en MongoDB.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

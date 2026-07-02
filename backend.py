@@ -8,7 +8,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 # 🔌 CONEXIÓN USANDO EL USUARIO ADMINISTRADOR RAÍZ REAL
-MONGO_URI = "mongodb://admin_root:SecretMongo2026@comerciotech-nosql-v2:27017/?authSource=admin"
+MONGO_URI = "mongodb://admin_root:SecretMongo2026*@comerciotech-nosql-v2:27017/?authSource=admin"
 client = MongoClient(MONGO_URI)
 db = client["comerciotech_catalogo"]
 productos_collection = db["productos"]
@@ -16,8 +16,10 @@ productos_collection = db["productos"]
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
     try:
+        # 🔍 LEER: Traemos todos los productos desde MongoDB reales
         productos_db = list(productos_collection.find())
         productos = []
+        
         for p in productos_db:
             item = {
                 "sku": str(p.get("sku", "SIN-SKU")),
@@ -25,10 +27,11 @@ async def read_index(request: Request):
                 "precio": float(p.get("precio", 0.0))
             }
             productos.append(item)
-
+            
         print(f"📦 ÉXITO: Se enviaron {len(productos)} productos a la plantilla.")
+        # ✅ Posición de argumentos corregida para la nueva versión de Starlette
         return templates.TemplateResponse(request, "index.html", {"productos": productos})
-
+        
     except Exception as e:
         print("❌ ERROR CRÍTICO EN READ_INDEX:")
         import traceback
@@ -41,12 +44,16 @@ async def guardar_producto(
     nombre: str = Form(...), 
     precio: float = Form(...)
 ):
-    # 💾 ESCRIBIR: Insertamos el nuevo producto directamente en MongoDB
-    nuevo_producto = {
-        "sku": sku,
-        "nombre": nombre,
-        "precio": float(precio) # Forzado a float para el jsonSchema estricto de Mongo
-    }
-    productos_collection.insert_one(nuevo_producto)
-    
+    try:
+        # 💾 ESCRIBIR: Insertamos el nuevo producto directamente en MongoDB
+        nuevo_producto = {
+            "sku": sku,
+            "nombre": nombre,
+            "precio": float(precio)
+        }
+        productos_collection.insert_one(nuevo_producto)
+        print(f"💾 Producto {sku} guardado con éxito.")
+    except Exception as e:
+        print(f"❌ Error al guardar en MongoDB: {e}")
+        
     return RedirectResponse(url="/", status_code=303)

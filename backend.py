@@ -17,11 +17,12 @@ productos_collection = db["productos"]
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
     try:
-        # 🔍 LEER: Traemos todos los productos desde MongoDB reales
+        # 🔍 LEER: Traemos todos los productos desde MongoDB
         productos_db = list(productos_collection.find())
         productos = []
         
         for p in productos_db:
+            # Forzamos la conversión limpia de cada campo para evitar incompatibilidades
             item = {
                 "sku": str(p.get("sku", "SIN-SKU")),
                 "nombre": str(p.get("nombre", "Sin Nombre")),
@@ -30,7 +31,6 @@ async def read_index(request: Request):
             productos.append(item)
             
         print(f"📦 ÉXITO: Se enviaron {len(productos)} productos a la plantilla.")
-        # ✅ Posición de argumentos corregida para la nueva versión de Starlette
         return templates.TemplateResponse(request, "index.html", {"productos": productos})
         
     except Exception as e:
@@ -58,9 +58,8 @@ async def guardar_producto(
         print(f"❌ Error al guardar en MongoDB: {e}")
         
     return RedirectResponse(url="/", status_code=303)
-    
-@app.post("/eliminar", response_class=RedirectResponse)
 
+@app.post("/eliminar", response_class=RedirectResponse)
 async def eliminar_producto(sku: str = Form(...)):
     try:
         # 🗑️ ELIMINAR: Borramos el producto que coincida con el SKU recibido

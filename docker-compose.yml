@@ -1,12 +1,11 @@
 version: '3.8'
 
 services:
-  comerciotech-nosql_v2:
+  comerciotech-nosql-v2:  # 👈 CORREGIDO: Se cambió _v2 por -v2
     image: mongo:7.0
-    container_name: comerciotech_nosql-v2
+    container_name: comerciotech_nosql_v2
     restart: always
     environment:
-      # 🔑 CREDENCIALES EN BRUTO PARA EL ADMINISTRADOR RAÍZ DE MONGO
       - MONGO_INITDB_ROOT_USERNAME=admin_root
       - MONGO_INITDB_ROOT_PASSWORD=SecretMongo2026*
     ports:
@@ -23,7 +22,6 @@ services:
     container_name: comerciotech_sql
     restart: always
     environment:
-      # 🔑 CREDENCIAL EN BRUTO PARA EL ADMINISTRADOR RAÍZ DE MYSQL
       - MYSQL_ROOT_PASSWORD=AdminComercio2026*
     ports:
       - "3306:3306"
@@ -34,11 +32,10 @@ services:
       - comerciotech_net
 
   comerciotech_app:
-    # 💡 CORREGIDO: Compila usando el Dockerfile de la carpeta donde estás parado
     build: .
     container_name: comerciotech_app
     depends_on:
-      - comerciotech-nosql-v2
+      - comerciotech-nosql-v2  # 👈 Ahora sí coincide perfectamente
       - comerciotech-sql
     restart: always
     ports:

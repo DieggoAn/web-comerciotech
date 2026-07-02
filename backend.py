@@ -17,18 +17,31 @@ productos_collection = db["productos"]
 async def read_index(request: Request):
     # 🔍 LEER: Traemos todos los productos desde MongoDB reales
     productos_db = list(productos_collection.find())
-    productos = []
+    lista_limpia = []
     
     for p in productos_db:
-        # Extraemos campos limpios y explícitos para no arrastrar objetos internos de Mongo a Jinja2
+        # Aislamos los datos de manera primitiva y estricta en strings y floats puros
+        sku_val = str(p.get("sku") if p.get("sku") is not None else "")
+        nombre_val = str(p.get("nombre") if p.get("nombre") is not None else "")
+        
+        # Nos aseguramos de que el precio sea obligatoriamente un número flotante puro
+        try:
+            precio_val = float(p.get("precio", 0.0))
+        except (TypeError, ValueError):
+            precio_val = 0.0
+
         item = {
-            "sku": str(p.get("sku", "")),
-            "nombre": str(p.get("nombre", "")),
-            "precio": float(p.get("precio", 0.0))
+            "sku": sku_val,
+            "nombre": nombre_val,
+            "precio": precio_val
         }
-        productos.append(item)
-        print(productos)
-    return templates.TemplateResponse("index.html", {"request": request, "productos": productos})
+        lista_limpia.append(item)
+        
+    # Enviamos una copia explícita a la plantilla
+    return templates.TemplateResponse(
+        "index.html", 
+        {"request": request, "productos": list(lista_limpia)}
+    )
 
 @app.post("/guardar", response_class=RedirectResponse)
 async def guardar_producto(

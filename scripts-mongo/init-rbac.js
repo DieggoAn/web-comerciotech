@@ -1,13 +1,17 @@
 // OJO: NO uses "use admin;" ni "use comerciotech_catalogo;". 
 // Dejamos que Docker maneje el contexto inicial.
 
-db.getSiblingDB('admin').createUser({
-  user: "srv_app_comerciotech",
-  pwd: "Python1!",
-  roles: [
-    { role: "readWrite", db: "comerciotech_catalogo" }
-  ]
+// Abre la sesión con los datos fijos del compose en bruto
+db.getSiblingDB('admin').auth('admin_root', 'SecretMongo2026*');
+
+// El resto del script sigue igual para crear el usuario srv_app_comerciotech...
+db = db.getSiblingDB('comerciotech_catalogo');
+db.createUser({
+    user: 'srv_app_comerciotech',
+    pwd: 'Python1!',
+    roles: [{ role: 'readWrite', db: 'comerciotech_catalogo' }]
 });
+db.createCollection('productos');
 
 // Ahora creamos las colecciones directamente en la BD del proyecto
 var dbProyecto = db.getSiblingDB('comerciotech_catalogo');

@@ -16,10 +16,8 @@ productos_collection = db["productos"]
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
     try:
-        # 🔍 LEER: Intentamos traer los productos de Mongo de forma segura
         productos_db = list(productos_collection.find())
         productos = []
-        
         for p in productos_db:
             item = {
                 "sku": str(p.get("sku", "SIN-SKU")),
@@ -27,16 +25,15 @@ async def read_index(request: Request):
                 "precio": float(p.get("precio", 0.0))
             }
             productos.append(item)
-            
+
         print(f"📦 ÉXITO: Se enviaron {len(productos)} productos a la plantilla.")
-        return templates.TemplateResponse("index.html", {"request": request, "productos": productos})
-        
+        return templates.TemplateResponse(request, "index.html", {"productos": productos})
+
     except Exception as e:
-        # 🚨 Si algo falla, lo imprimimos detalladamente en el log de Docker sin tumbar la app
         print("❌ ERROR CRÍTICO EN READ_INDEX:")
         import traceback
         print(traceback.format_exc())
-        return templates.TemplateResponse("index.html", {"request": request, "productos": [], "error": str(e)})
+        return templates.TemplateResponse(request, "index.html", {"productos": [], "error": str(e)})
 
 @app.post("/guardar", response_class=RedirectResponse)
 async def guardar_producto(

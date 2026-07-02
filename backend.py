@@ -58,8 +58,8 @@ async def guardar_producto(
         print(f"❌ Error al guardar en MongoDB: {e}")
         
     return RedirectResponse(url="/", status_code=303)
-    @app.post("/eliminar", response_class=RedirectResponse)
-    
+@app.post("/eliminar", response_class=RedirectResponse)
+
 async def eliminar_producto(sku: str = Form(...)):
     try:
         # 🗑️ ELIMINAR: Borramos el producto que coincida con el SKU recibido

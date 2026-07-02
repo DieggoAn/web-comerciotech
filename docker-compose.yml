@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  comerciotech-nosql:
+    image: mongo:7.0
+    container_name: comerciotech_nosql
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASS}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./scripts-mongo:/docker-entrypoint-initdb.d:ro
+    command: [ "--auth" ]
+    # 🔌 Vinculamos el contenedor a la red común
+    networks:
+      - comerciotech_net
+
+  comerciotech-sql:
+    image: mysql:8.0
+    container_name: comerciotech_sql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=AdminComercio2026*
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts-sql:/docker-entrypoint-initdb.d:ro
+    # 🔌 Vinculamos el contenedor a la red común
+    networks:
+      - comerciotech_net
+
+  comerciotech_app:
+    build: /root/web-comerciotech/
+    container_name: comerciotech_app
+    depends_on:
+      - comerciotech-nosql
+      - comerciotech-sql
+    restart: always
+    ports:
+      - "127.0.0.1:8080:8080"
+    stdin_open: true
+    tty: true
+    # 🔌 Vinculamos el contenedor a la red común
+    networks:
+      - comerciotech_net
+
+# 🌐 DECLARACIÓN EXPLÍCITA DE LA RED INTERNA
+networks:
+  comerciotech_net:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  mysql_data:

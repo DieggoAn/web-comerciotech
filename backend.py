@@ -7,8 +7,8 @@ import os
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# 🔌 CONEXIÓN REAL A MONGODB (Usando el DNS interno de la red Docker)
-MONGO_URI = "mongodb://srv_app_comerciotech:Python1!@comerciotech-nosql-v2:27017/?authSource=admin"
+# 🔌 CONEXIÓN USANDO EL USUARIO ADMINISTRADOR RAÍZ REAL
+MONGO_URI = "mongodb://admin_root:SecretMongo2026*@comerciotech-nosql-v2:27017/?authSource=admin"
 client = MongoClient(MONGO_URI)
 db = client["comerciotech_catalogo"]
 productos_collection = db["productos"]

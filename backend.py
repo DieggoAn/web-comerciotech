@@ -43,21 +43,22 @@ async def read_index(request: Request):
 async def guardar_producto(
     sku: str = Form(...), 
     nombre: str = Form(...), 
-    precio: float = Form(...)
+    precio: float = Form(...) # 👈 FastAPI lo recibe como float gracias a esto
 ):
     try:
-        # 💾 ESCRIBIR: Insertamos el nuevo producto directamente en MongoDB
+        # 💾 ESCRIBIR: Forzamos que sea float para cumplir el jsonSchema de MongoDB
         nuevo_producto = {
-            "sku": sku,
-            "nombre": nombre,
-            "precio": float(precio)
+            "sku": str(sku),
+            "nombre": str(nombre),
+            "precio": float(precio) # 👈 Esto garantiza que en Mongo sea un 'double'
         }
         productos_collection.insert_one(nuevo_producto)
-        print(f"💾 Producto {sku} guardado con éxito.")
+        print(f"💾 Producto {sku} guardado con éxito en MongoDB.")
     except Exception as e:
         print(f"❌ Error al guardar en MongoDB: {e}")
         
     return RedirectResponse(url="/", status_code=303)
+    
 @app.post("/eliminar", response_class=RedirectResponse)
 
 async def eliminar_producto(sku: str = Form(...)):

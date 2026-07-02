@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  comerciotech-nosql:
+  comerciotech-nosql_v2:
     image: mongo:7.0
-    container_name: comerciotech_nosql
+    container_name: comerciotech_nosql-v2
     restart: always
     environment:
       # 🔑 CREDENCIALES EN BRUTO PARA EL ADMINISTRADOR RAÍZ DE MONGO

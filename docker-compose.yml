@@ -38,7 +38,7 @@ services:
     build: .
     container_name: comerciotech_app
     depends_on:
-      - comerciotech-nosql
+      - comerciotech-nosql-v2
       - comerciotech-sql
     restart: always
     ports:

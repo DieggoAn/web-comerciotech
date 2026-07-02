@@ -1,12 +1,9 @@
-// 1. Conectarse y autenticarse en la base administrativa
-var adminDB = db.getSiblingDB('admin');
-adminDB.auth('admin_root', 'SecretMongo2026*');
+// Se conecta usando el root estricto del compose
+db.getSiblingDB('admin').auth('admin_root', 'SecretMongo2026*');
 
-// 2. Definir la base de datos del proyecto de forma limpia
-var dbProyecto = db.getSiblingDB('comerciotech_catalogo');
+db = db.getSiblingDB('comerciotech_catalogo');
 
-// 3. Crear el usuario del servicio para la App de Python con FastAPI
-dbProyecto.createUser({
+db.createUser({
     user: 'srv_app_comerciotech',
     pwd: 'Python1!',
     roles: [

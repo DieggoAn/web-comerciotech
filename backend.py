@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templatetemplates import Jinja2Templates
+from fastapi.templating import Jinja2Templates # 👈 ¡CORREGIDO AQUÍ!
 from pymongo import MongoClient
 import os
 
@@ -16,7 +16,6 @@ productos_collection = db["productos"]
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
     # 🔍 LEER: Traemos todos los productos desde MongoDB reales
-    # Convertimos el '_id' de Mongo a string para que no falle en el HTML
     productos_db = list(productos_collection.find())
     productos = []
     for p in productos_db:
@@ -39,5 +38,4 @@ async def guardar_producto(
     }
     productos_collection.insert_one(nuevo_producto)
     
-    # Redirigir a la página principal para ver el cambio
     return RedirectResponse(url="/", status_code=303)

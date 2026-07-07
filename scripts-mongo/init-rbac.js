@@ -66,4 +66,24 @@ dbProyecto.createCollection("carritos", {
 dbProyecto.carritos.createIndex({ usuario_id: 1, estado: 1 }, { unique: true });
 dbProyecto.carritos.createIndex({ actualizado_en: 1 }, { expireAfterSeconds: 1209600 });
 
-print("🔒 ¡Entorno NoSQL inicializado con validadores corregidos de forma segura!");
+// 6. Cargar datos iniciales del catálogo (Semilla/Seed matching SQL critical inventory)
+dbProyecto.productos.insertMany([
+  {
+    sku: "CT-LAP-001",
+    nombre: "Laptop Lenovo ThinkPad L14",
+    precio: 850000.0,
+    stock: NumberInt(50),
+    categoria: "Computadores",
+    atributos: { procesador: "Intel Core i7", ram: "16GB", almacenamiento: "512GB SSD" }
+  },
+  {
+    sku: "CT-TECLADO-02",
+    nombre: "Teclado Mecánico Logitech MX Mechanical",
+    precio: 120000.0,
+    stock: NumberInt(120),
+    categoria: "Accesorios",
+    atributos: { conectividad: "Bluetooth/Logi Bolt", retroiluminacion: "Blanca" }
+  }
+]);
+
+print("🔒 ¡Entorno NoSQL inicializado con validadores y semillas corregidos de forma segura!");

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComercioTech - Portal de Compra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <!-- Barra de Navegación -->
+    <nav class="bg-teal-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                🛒 ComercioTech <span class="bg-teal-800 text-xs px-2.5 py-1 rounded font-normal text-teal-200 uppercase tracking-widest">Portal de Compra</span>
+            </h1>
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-sm font-medium hover:text-gray-300 transition-colors flex items-center gap-1">
+                    🚪 Cerrar Sesión
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Hero de Usuario -->
+        <div class="bg-gradient-to-r from-teal-800 to-blue-900 text-white rounded-xl p-8 shadow-md mb-8">
+            <h2 class="text-2xl md:text-3xl font-bold mb-2">🛍️ Explora la Tienda y Arma tu Pedido</h2>
+            <p class="text-teal-100 max-w-2xl text-sm md:text-base">
+                Selecciona tus artículos tecnológicos del catálogo. Los productos se guardan en tu carrito activo de MongoDB, listos para ser facturados contablemente por el administrador.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Columna Catálogo (Izquierda) -->
+            <div class="lg:col-span-2 space-y-6">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    📦 Productos Disponibles
+                </h3>
+                
+                {% if productos %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for producto in productos %}
+                            <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+                                <div>
+                                    <div class="flex justify-between items-start gap-2">
+                                        <span class="text-[10px] uppercase font-bold tracking-widest text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full font-mono">{{ producto.sku }}</span>
+                                        <span class="text-xs text-gray-400 font-semibold">{{ producto.categoria }}</span>
+                                    </div>
+                                    <h4 class="font-bold text-gray-900 text-base mt-3 mb-1">{{ producto.nombre }}</h4>
+                                    
+                                    <!-- Atributos -->
+                                    {% if producto.atributos %}
+                                        <div class="mt-2 bg-gray-50 p-2.5 rounded border border-gray-100 text-xs text-gray-500 font-mono space-y-0.5">
+                                            {% for key, val in producto.atributos.items() %}
+                                                <p><span class="font-bold text-gray-700">{{ key }}:</span> {{ val }}</p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="flex justify-between items-baseline mt-4">
+                                        <p class="text-2xl font-extrabold text-gray-900">${{ producto.precio }}</p>
+                                        <p class="text-xs text-gray-500 font-semibold">Stock: {{ producto.stock }} unidades</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-5 pt-3 border-t border-gray-100">
+                                    <form action="/carrito/agregar" method="POST">
+                                        <input type="hidden" name="sku" value="{{ producto.sku }}">
+                                        <input type="hidden" name="precio" value="{{ producto.precio }}">
+                                        <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
+                                            🛒 Agregar al Carrito
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="bg-white rounded-lg border border-gray-200 py-16 text-center shadow-sm">
+                        <div class="text-5xl mb-4">📭</div>
+                        <h4 class="text-lg font-bold text-gray-700">No hay productos en el catálogo</h4>
+                        <p class="text-gray-400 text-sm mt-1">El administrador aún no ha ingresado artículos al sistema.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Columna Carrito (Derecha) -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm sticky top-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b flex justify-between items-center">
+                        <span>🛒 Tu Carrito</span>
+                        <span class="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded font-bold font-mono">MongoDB</span>
+                    </h3>
+                    
+                    {% if carrito and carrito.items %}
+                        <div class="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                            {% for item in carrito.items %}
+                                <div class="flex justify-between items-start gap-4 text-sm border-b pb-3">
+                                    <div>
+                                        <p class="font-bold text-gray-800">{{ item.sku }}</p>
+                                        <p class="text-xs text-gray-400">Cantidad: {{ item.cantidad }} x ${{ item.precio_capturado }}</p>
+                                    </div>
+                                    <p class="font-semibold text-gray-900">${{ item.subtotal }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-6 pt-4 border-t space-y-4">
+                            <div class="flex justify-between items-center text-gray-900">
+                                <span class="font-bold text-base">Total General</span>
+                                <span class="font-extrabold text-xl text-teal-700">${{ carrito.total }}</span>
+                            </div>
+                            
+                            <form action="/carrito/vaciar" method="POST">
+                                <button type="submit" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded border border-red-200 transition-colors text-sm text-center">
+                                    🗑️ Vaciar Carrito Activo
+                                </button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <div class="py-12 text-center text-gray-400">
+                            <p class="text-4xl mb-3">🛒</p>
+                            <p class="text-sm font-semibold">El carrito está vacío</p>
+                            <p class="text-xs text-gray-400 mt-1">Añade productos de la lista de la izquierda para comenzar.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

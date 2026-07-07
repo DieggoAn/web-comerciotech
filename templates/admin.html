@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComercioTech - Panel de Administración</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+
+    <!-- Barra de Navegación -->
+    <nav class="bg-slate-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                ⚙️ ComercioTech <span class="bg-blue-800 text-xs px-2.5 py-1 rounded font-normal text-blue-200 uppercase tracking-widest">Admin Panel</span>
+            </h1>
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-sm font-medium hover:text-gray-300 transition-colors flex items-center gap-1">
+                    🚪 Cerrar Sesión
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Banners de Notificación de Checkout -->
+        {% if checkout_success == '1' %}
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-lg mb-8 shadow-sm">
+            <h3 class="font-bold text-lg mb-1">🎉 Factura Generada Exitosamente (Transacción ACID)</h3>
+            <p class="text-sm">Se ha descontado el stock crítico de la tabla <strong>inventario_critico</strong> (bloqueo pesimista mediante SELECT ... FOR UPDATE), se ha registrado la factura en la tabla <strong>facturas</strong> de MySQL, y el carrito de MongoDB ha sido marcado como <strong>convertido</strong>.</p>
+            <div class="mt-3 bg-white p-3 rounded border border-emerald-100 font-mono text-xs text-emerald-950 flex flex-wrap gap-4">
+                <p><strong>Nro Factura:</strong> #{{ nro_factura }}</p>
+                <p><strong>Monto Neto:</strong> ${{ monto }}</p>
+                <p><strong>IVA (19%):</strong> ${{ iva }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if checkout_error %}
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 px-6 py-4 rounded-lg mb-8 shadow-sm">
+            <h3 class="font-bold text-lg mb-1">❌ Error en la Transacción Políglota (Rollback)</h3>
+            <p class="text-sm">Se realizó rollback completo en MySQL. Detalles: <code class="bg-rose-100 px-1 py-0.5 rounded font-mono text-rose-950">{{ checkout_error }}</code></p>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Columna Izquierda: Formularios -->
+            <div class="space-y-8 lg:col-span-1">
+                
+                <!-- Formulario Agregar Producto -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 border-b pb-2">
+                        📦 Registrar Nuevo Producto
+                    </h2>
+                    <form action="/guardar" method="POST" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">SKU (Identificador Único)</label>
+                            <input type="text" name="sku" required placeholder="Ej: CT-LAP-001" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Nombre Comercial</label>
+                            <input type="text" name="nombre" required placeholder="Ej: Notebook ThinkPad L14" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Precio ($)</label>
+                                <input type="number" name="precio" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Stock Inicial</label>
+                                <input type="number" name="stock" required placeholder="Ej: 50" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Categoría</label>
+                            <input type="text" name="categoria" required placeholder="Ej: Computadores" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Atributos (Subdocumento JSON flexible)</label>
+                            <textarea name="atributos" placeholder='{"marca": "Lenovo", "procesador": "Intel i5", "ram": "16GB"}' class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm font-mono h-24"></textarea>
+                            <p class="text-[10px] text-gray-400 mt-1">Ingresa un objeto JSON válido para guardar atributos flexibles.</p>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded transition text-sm shadow-sm mt-2">
+                            💾 Guardar Catálogo & Sincronizar SQL
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Formulario Checkout Políglota -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 border-b pb-2">
+                        🧾 Facturación Políglota (Checkout)
+                    </h2>
+                    <form action="/admin/checkout" method="POST" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Seleccionar Carrito Activo</label>
+                            {% if carritos %}
+                                <select name="carrito_id" required class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm bg-white">
+                                    <option value="" disabled selected>Seleccione un carrito...</option>
+                                    {% for c in carritos %}
+                                        <option value="{{ c.id }}">ID: {{ c.id[:8] }}... | Usuario: {{ c.usuario_id }} | Total: ${{ c.total }} ({{ c.items_count }} items)</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <div class="text-xs text-amber-600 bg-amber-50 border border-amber-200 p-3 rounded">
+                                    ⚠️ No hay carritos activos disponibles en MongoDB para procesar.
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if carritos %}
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded transition text-sm shadow-sm flex items-center justify-center gap-1.5">
+                            ⚡ Procesar Factura Contable (ACID)
+                        </button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Catálogo de Productos -->
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 lg:col-span-2">
+                <h2 class="text-lg font-bold text-gray-900 mb-4 flex justify-between items-center border-b pb-2">
+                    <span>📋 Catálogo NoSQL (MongoDB)</span>
+                    <button onclick="window.location.reload()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded border border-gray-300 transition">
+                        🔄 Actualizar Tabla
+                    </button>
+                </h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-bold border-b border-gray-200">
+                                <th class="py-3 px-4">SKU</th>
+                                <th class="py-3 px-4">Nombre / Categoría</th>
+                                <th class="py-3 px-4">Precio / Stock</th>
+                                <th class="py-3 px-4">Atributos Flexibles</th>
+                                <th class="py-3 px-4 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% if productos %}
+                                {% for producto in productos %}
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="py-3 px-4 font-mono text-xs font-bold text-blue-600">{{ producto.sku }}</td>
+                                    <td class="py-3 px-4">
+                                        <p class="font-medium text-gray-900">{{ producto.nombre }}</p>
+                                        <p class="text-xs text-gray-400 font-semibold">{{ producto.categoria }}</p>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <p class="font-semibold text-gray-900">${{ producto.precio }}</p>
+                                        <p class="text-xs text-gray-500 font-semibold">Stock: {{ producto.stock }}</p>
+                                    </td>
+                                    <td class="py-3 px-4 text-xs font-mono text-gray-500 max-w-xs truncate">
+                                        {% if producto.atributos %}
+                                            <span title="{{ producto.atributos }}">{{ producto.atributos }}</span>
+                                        {% else %}
+                                            <span class="text-gray-300">Ninguno</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <form action="/eliminar" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar este producto? Esto también borrará su stock crítico en MySQL.');" style="display:inline;">
+                                            <input type="hidden" name="sku" value="{{ producto.sku }}">
+                                            <button type="submit" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded border border-red-200 transition">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-8 text-gray-400">No hay productos registrados en MongoDB.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -3,87 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ComercioTech - Panel de Control del Catálogo</title>
+    <title>ComercioTech - Bienvenido</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+<body class="bg-gray-50 text-gray-800 font-sans antialiased flex flex-col min-h-screen justify-between">
 
+    <!-- Barra de Navegación -->
     <nav class="bg-blue-900 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-wide">💼 ComercioTech <span class="text-blue-300 text-sm font-normal">(Base de Datos Real)</span></h1>
-            <span class="bg-green-600 px-3 py-1 rounded text-xs uppercase font-semibold border border-green-700">Fase 2: MongoDB Conectado</span>
+            <h1 class="text-xl font-bold tracking-wide">💼 ComercioTech</h1>
+            <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded text-sm transition-all shadow border border-blue-500 flex items-center gap-1.5 active:scale-95">
+                🔑 Iniciar Sesión
+            </button>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Contenido Principal -->
+    <main class="max-w-4xl mx-auto px-4 py-16 text-center flex-grow flex flex-col justify-center items-center">
         
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 lg:col-span-1">
-            <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                📦 Registrar Producto
-            </h2>
-            <form action="/guardar" method="POST" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">SKU (Código Único)</label>
-                    <input type="text" name="sku" required placeholder="Ej: PROD-100" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Nombre Comercial</label>
-                    <input type="text" name="nombre" required placeholder="Ej: Monitor Gamer 24" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Precio ($)</label>
-                    <input type="number" name="precio" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded transition text-sm shadow-sm mt-2">
-                    Guardar en Catálogo Real
-                </button>
-            </form>
+        <!-- Alerta de Error de Autenticación -->
+        {% if error == 'auth_failed' %}
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-8 max-w-md text-sm shadow-sm flex items-center gap-2">
+            <span>❌</span>
+            <p><strong>Error de autenticación:</strong> Credenciales incorrectas. Intenta nuevamente.</p>
+        </div>
+        {% endif %}
+
+        <!-- Hero Welcome -->
+        <h2 class="text-4xl md:text-5xl font-extrabold text-blue-950 tracking-tight mb-4">
+            Bienvenido a ComercioTech v2
+        </h2>
+        <p class="text-gray-600 text-lg md:text-xl max-w-2xl mb-8 leading-relaxed">
+            Nuestra plataforma combina la agilidad de los catálogos NoSQL en MongoDB con la rigidez contable de MySQL bajo transacciones ACID.
+        </p>
+
+        <!-- Tarjetas de Explicación de Roles -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl w-full mb-12">
+            <!-- Admin -->
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-left hover:border-blue-400 transition-colors">
+                <div class="text-3xl mb-3">🛠️</div>
+                <h3 class="font-bold text-gray-900 text-lg mb-1">Administradores</h3>
+                <p class="text-gray-500 text-sm mb-4">Gestiona el catálogo de productos con validación estricta y procesa la facturación políglota con bloqueo pesimista en base de datos.</p>
+                <span class="text-xs bg-blue-50 text-blue-700 font-semibold px-2 py-1 rounded">Credencial: admin / admin123</span>
+            </div>
+            <!-- Usuario -->
+            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm text-left hover:border-teal-400 transition-colors">
+                <div class="text-3xl mb-3">🛍️</div>
+                <h3 class="font-bold text-gray-900 text-lg mb-1">Clientes / Usuarios</h3>
+                <p class="text-gray-500 text-sm mb-4">Navega por la tienda online, explora las categorías de tecnología y añade tus productos preferidos al carrito de compras.</p>
+                <span class="text-xs bg-teal-50 text-teal-700 font-semibold px-2 py-1 rounded">Credencial: user / user123</span>
+            </div>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 lg:col-span-2">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-gray-900">📋 Productos en MongoDB</h2>
-                <button onclick="window.location.reload()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded border border-gray-300 transition">
-                    🔄 Actualizar Tabla
-                </button>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="bg-gray-100 text-gray-600 uppercase text-xs font-bold border-b border-gray-200">
-                            <th class="py-3 px-4">SKU</th>
-                            <th class="py-3 px-4">Nombre</th>
-                            <th class="py-3 px-4">Precio</th>
-                            <th class="py-3 px-4 text-center">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        {% if productos %}
-                            {% for producto in productos %}
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="py-3 px-4 font-mono text-xs font-bold text-blue-600">{{ producto.sku }}</td>
-                                <td class="py-3 px-4 font-medium text-gray-900">{{ producto.nombre }}</td>
-                                <td class="py-3 px-4 font-semibold text-gray-900">${{ producto.precio }}</td>
-                                <td class="py-3 px-4 text-center">
-                                    <form action="/eliminar" method="POST" onsubmit="return confirm('¿Seguro que deseas eliminar este producto?');" style="display:inline;">
-                                        <input type="hidden" name="sku" value="{{ producto.sku }}">
-                                        <button type="submit" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded border border-red-200 transition">
-                                            Eliminar
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center py-8 text-gray-400">No hay productos registrados en MongoDB.</td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <button onclick="openModal()" class="bg-blue-900 hover:bg-blue-800 text-white font-bold px-8 py-3.5 rounded-lg text-base shadow transition-all hover:shadow-lg active:scale-95">
+            🔑 Acceder al Portal
+        </button>
     </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 text-xs py-6 text-center border-t border-gray-800">
+        <p>&copy; 2026 ComercioTech Financiero & Catálogo Real. Desarrollado con FastAPI, Jinja2, MongoDB y MySQL.</p>
+    </footer>
+
+    <!-- Modal de Login Centralizado -->
+    <div id="loginModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center hidden z-50 transition-all duration-300">
+        <div id="modalContainer" class="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-md w-full mx-4 overflow-hidden transform scale-95 opacity-0 transition-all duration-300">
+            <!-- Header -->
+            <div class="bg-blue-900 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold tracking-wide flex items-center gap-2">🔐 Iniciar Sesión</h3>
+                <button onclick="closeModal()" class="text-white hover:text-gray-200 focus:outline-none text-2xl leading-none">&times;</button>
+            </div>
+            <!-- Formulario -->
+            <form action="/login" method="POST" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Username (Usuario)</label>
+                    <input type="text" name="username" required placeholder="Ej: admin o user" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Password (Contraseña)</label>
+                    <input type="password" name="password" required placeholder="••••••••" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeModal()" class="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded transition-colors text-sm border border-gray-300">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm">
+                        Ingresar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts JavaScript para el Modal -->
+    <script>
+        function openModal() {
+            const modal = document.getElementById('loginModal');
+            const container = document.getElementById('modalContainer');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                container.classList.remove('scale-95', 'opacity-0');
+                container.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('loginModal');
+            const container = document.getElementById('modalContainer');
+            container.classList.remove('scale-100', 'opacity-100');
+            container.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // Cerrar modal al hacer clic fuera del contenedor
+        document.getElementById('loginModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
 </body>
 </html>

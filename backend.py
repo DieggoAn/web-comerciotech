@@ -126,14 +126,7 @@ async def login(username: str = Form(...), password: str = Form(...)):
 
 # 💼 VISTA DE ADMINISTRADOR
 @app.get("/admin", response_class=HTMLResponse)
-async def read_admin(
-    request: Request,
-    checkout_success: str = None,
-    nro_factura: str = None,
-    monto: str = None,
-    iva: str = None,
-    checkout_error: str = None
-):
+async def read_admin(request: Request):
     try:
         # Traer catálogo completo de MongoDB
         productos_db = list(productos_collection.find())
@@ -148,31 +141,40 @@ async def read_admin(
                 "atributos": p.get("atributos", {})
             })
             
-        # Traer carritos activos de MongoDB
-        carritos_activos = list(db["carritos"].find({"estado": "activo"}))
-        carritos = []
-        for c in carritos_activos:
-            total = 0.0
-            for item in c.get("items", []):
-                total += item["cantidad"] * item["precio_capturado"]
-            carritos.append({
-                "id": str(c["_id"]),
-                "usuario_id": c.get("usuario_id"),
-                "total": total,
-                "items_count": len(c.get("items", []))
-            })
+        # Traer historial de facturación global desde MySQL (INNER JOIN con clientes_financiero)
+        facturas_historial = []
+        try:
+            conn = mysql.connector.connect(**MYSQL_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT f.nro_factura, c.nombre_completo, c.rut_cliente, f.fecha_emision, f.monto_total, f.impuesto_iva, f.estado_pago
+                FROM facturas f
+                INNER JOIN clientes_financiero c ON f.id_cliente = c.id_cliente
+                ORDER BY f.fecha_emision DESC
+            """)
+            rows = cursor.fetchall()
+            for r in rows:
+                fecha_str = r["fecha_emision"].strftime("%Y-%m-%d %H:%M:%S") if r.get("fecha_emision") else ""
+                facturas_historial.append({
+                    "nro_factura": r["nro_factura"],
+                    "nombre_completo": r["nombre_completo"],
+                    "rut_cliente": r["rut_cliente"],
+                    "fecha_emision": fecha_str,
+                    "monto_total": float(r["monto_total"]),
+                    "impuesto_iva": float(r["impuesto_iva"]),
+                    "estado_pago": r["estado_pago"]
+                })
+            cursor.close()
+            conn.close()
+        except Exception as sql_ex:
+            print(f"⚠️ Error al obtener historial financiero global MySQL: {sql_ex}")
             
         return templates.TemplateResponse(
             request,
             "admin.html",
             {
                 "productos": productos,
-                "carritos": carritos,
-                "checkout_success": checkout_success,
-                "nro_factura": nro_factura,
-                "monto": monto,
-                "iva": iva,
-                "checkout_error": checkout_error
+                "facturas_historial": facturas_historial
             }
         )
     except Exception as e:
@@ -180,7 +182,7 @@ async def read_admin(
         return templates.TemplateResponse(
             request,
             "admin.html",
-            {"productos": [], "carritos": [], "error": str(e)}
+            {"productos": [], "facturas_historial": [], "error": str(e)}
         )
 
 # 💾 CREAR PRODUCTO (CON AUDITORÍA DE ESQUEMA MONGO & REGISTRO DE STOCK CRÍTICO SQL)
@@ -261,7 +263,14 @@ async def eliminar_producto(sku: str = Form(...)):
 
 # 🛍️ VISTA DE USUARIO
 @app.get("/user", response_class=HTMLResponse)
-async def read_user(request: Request):
+async def read_user(
+    request: Request,
+    checkout_success: str = None,
+    nro_factura: str = None,
+    monto: str = None,
+    iva: str = None,
+    checkout_error: str = None
+):
     try:
         # Catálogo para usuario
         productos_db = list(productos_collection.find())
@@ -291,6 +300,30 @@ async def read_user(request: Request):
                     "subtotal": subtotal
                 })
                 
+        # Obtener historial de compras del usuario en MySQL (id_cliente = 1)
+        compras = []
+        try:
+            conn = mysql.connector.connect(**MYSQL_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(
+                "SELECT nro_factura, monto_total, impuesto_iva, fecha_emision, estado_pago FROM facturas WHERE id_cliente = %s ORDER BY fecha_emision DESC",
+                (1,)
+            )
+            rows = cursor.fetchall()
+            for r in rows:
+                fecha_str = r["fecha_emision"].strftime("%Y-%m-%d %H:%M:%S") if r.get("fecha_emision") else ""
+                compras.append({
+                    "nro_factura": r["nro_factura"],
+                    "monto_total": float(r["monto_total"]),
+                    "impuesto_iva": float(r["impuesto_iva"]),
+                    "fecha_emision": fecha_str,
+                    "estado_pago": r["estado_pago"]
+                })
+            cursor.close()
+            conn.close()
+        except Exception as sql_ex:
+            print(f"⚠️ Error al obtener historial de facturas MySQL: {sql_ex}")
+                
         return templates.TemplateResponse(
             request,
             "user.html",
@@ -300,12 +333,18 @@ async def read_user(request: Request):
                     "id": str(carrito["_id"]) if carrito else None,
                     "items": carrito_items,
                     "total": total_carrito
-                }
+                },
+                "compras": compras,
+                "checkout_success": checkout_success,
+                "nro_factura": nro_factura,
+                "monto": monto,
+                "iva": iva,
+                "checkout_error": checkout_error
             }
         )
     except Exception as e:
         print(f"❌ ERROR EN READ_USER: {e}")
-        return templates.TemplateResponse(request, "user.html", {"productos": [], "carrito": None, "error": str(e)})
+        return templates.TemplateResponse(request, "user.html", {"productos": [], "carrito": None, "compras": [], "error": str(e)})
 
 # 🛒 AGREGAR AL CARRITO DE COMPRAS MONGO
 @app.post("/carrito/agregar", response_class=RedirectResponse)
@@ -372,21 +411,22 @@ async def vaciar_carrito():
         
     return RedirectResponse(url="/user", status_code=303)
 
-# 🧾 PROCESAR FACTURACIÓN Y CHECKOUT (ADMIN EXCLUSIVO)
-@app.post("/admin/checkout", response_class=RedirectResponse)
-async def admin_checkout(carrito_id: str = Form(...)):
+# 💳 PROCESAR FACTURACIÓN Y CHECKOUT AUTOMÁTICO (USUARIO)
+@app.post("/user/checkout", response_class=RedirectResponse)
+async def user_checkout(carrito_id: str = Form(...)):
     try:
+        # Iniciar checkout con la lógica políglota transaccional
         resultado = simular_pago_checkout(carrito_id)
         nro = resultado["nro_factura"]
         monto = resultado["monto_total"]
         iva = resultado["impuesto_iva"]
         return RedirectResponse(
-            url=f"/admin?checkout_success=1&nro_factura={nro}&monto={monto}&iva={iva}",
+            url=f"/user?checkout_success=1&nro_factura={nro}&monto={monto}&iva={iva}",
             status_code=303
         )
     except Exception as e:
-        print(f"❌ Error en checkout: {e}")
+        print(f"❌ Error en checkout del usuario: {e}")
         return RedirectResponse(
-            url=f"/admin?checkout_error={str(e)}",
+            url=f"/user?checkout_error={str(e)}",
             status_code=303
         )

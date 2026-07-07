@@ -25,26 +25,6 @@
     <!-- Contenido Principal -->
     <main class="max-w-7xl mx-auto px-4 py-8">
         
-        <!-- Banners de Notificación de Checkout -->
-        {% if checkout_success == '1' %}
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-lg mb-8 shadow-sm">
-            <h3 class="font-bold text-lg mb-1">🎉 Factura Generada Exitosamente (Transacción ACID)</h3>
-            <p class="text-sm">Se ha descontado el stock crítico de la tabla <strong>inventario_critico</strong> (bloqueo pesimista mediante SELECT ... FOR UPDATE), se ha registrado la factura en la tabla <strong>facturas</strong> de MySQL, y el carrito de MongoDB ha sido marcado como <strong>convertido</strong>.</p>
-            <div class="mt-3 bg-white p-3 rounded border border-emerald-100 font-mono text-xs text-emerald-950 flex flex-wrap gap-4">
-                <p><strong>Nro Factura:</strong> #{{ nro_factura }}</p>
-                <p><strong>Monto Neto:</strong> ${{ monto }}</p>
-                <p><strong>IVA (19%):</strong> ${{ iva }}</p>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if checkout_error %}
-        <div class="bg-rose-50 border border-rose-200 text-rose-800 px-6 py-4 rounded-lg mb-8 shadow-sm">
-            <h3 class="font-bold text-lg mb-1">❌ Error en la Transacción Políglota (Rollback)</h3>
-            <p class="text-sm">Se realizó rollback completo en MySQL. Detalles: <code class="bg-rose-100 px-1 py-0.5 rounded font-mono text-rose-950">{{ checkout_error }}</code></p>
-        </div>
-        {% endif %}
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Columna Izquierda: Formularios -->
@@ -88,33 +68,6 @@
                         </button>
                     </form>
                 </div>
-
-                <!-- Formulario Checkout Políglota -->
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 border-b pb-2">
-                        🧾 Facturación Políglota (Checkout)
-                    </h2>
-                    <form action="/admin/checkout" method="POST" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Seleccionar Carrito Activo</label>
-                            {% if carritos %}
-                                <select name="carrito_id" required class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm bg-white">
-                                    <option value="" disabled selected>Seleccione un carrito...</option>
-                                    {% for c in carritos %}
-                                        <option value="{{ c.id }}">ID: {{ c.id[:8] }}... | Usuario: {{ c.usuario_id }} | Total: ${{ c.total }} ({{ c.items_count }} items)</option>
-                                    {% endfor %}
-                                </select>
-                            {% else %}
-                                <div class="text-xs text-amber-600 bg-amber-50 border border-amber-200 p-3 rounded">
-                                    ⚠️ No hay carritos activos disponibles en MongoDB para procesar.
-                                </div>
-                            {% endif %}
-                        </div>
-                        {% if carritos %}
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded transition text-sm shadow-sm flex items-center justify-center gap-1.5">
-                            ⚡ Procesar Factura Contable (ACID)
-                        </button>
-                        {% endif %}
                     </form>
                 </div>
             </div>
@@ -178,6 +131,55 @@
                     </table>
                 </div>
             </div>
+        </div>
+
+        <!-- Sección Historial Financiero Global (Audit Log de Facturas en MySQL) -->
+        <div class="mt-12 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <h2 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2 border-b pb-3">
+                🔍 Historial Financiero Global (Auditoría SQL)
+            </h2>
+            
+            {% if facturas_historial %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 uppercase text-[11px] font-bold border-b border-gray-200">
+                                <th class="py-3 px-4">Nº Factura</th>
+                                <th class="py-3 px-4">Cliente</th>
+                                <th class="py-3 px-4">RUT</th>
+                                <th class="py-3 px-4">Fecha Emisión</th>
+                                <th class="py-3 px-4 text-right">Monto Neto</th>
+                                <th class="py-3 px-4 text-right">IVA (19%)</th>
+                                <th class="py-3 px-4 text-right">Total</th>
+                                <th class="py-3 px-4 text-center">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for factura in facturas_historial %}
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="py-4 px-4 font-mono font-bold text-blue-600">#{{ factura.nro_factura }}</td>
+                                    <td class="py-4 px-4 font-medium text-gray-900">{{ factura.nombre_completo }}</td>
+                                    <td class="py-4 px-4 text-gray-600">{{ factura.rut_cliente }}</td>
+                                    <td class="py-4 px-4 text-gray-500">{{ factura.fecha_emision }}</td>
+                                    <td class="py-4 px-4 text-right text-gray-700">${{ "{:.2f}".format(factura.monto_total) }}</td>
+                                    <td class="py-4 px-4 text-right text-gray-500">${{ "{:.2f}".format(factura.impuesto_iva) }}</td>
+                                    <td class="py-4 px-4 text-right font-bold text-gray-900">${{ "{:.2f}".format(factura.monto_total + factura.impuesto_iva) }}</td>
+                                    <td class="py-4 px-4 text-center">
+                                        <span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-semibold uppercase tracking-wider">
+                                            {{ factura.estado_pago }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="py-8 text-center text-gray-400">
+                    <p class="text-3xl mb-2">📁</p>
+                    <p class="text-sm font-semibold">No se han emitido facturas en la plataforma</p>
+                </div>
+            {% endif %}
         </div>
     </main>
 </body>

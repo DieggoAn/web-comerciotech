@@ -96,9 +96,9 @@
                         <span class="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded font-bold font-mono">MongoDB</span>
                     </h3>
                     
-                    {% if carrito and carrito.items %}
+                    {% if carrito and carrito['items'] %}
                         <div class="space-y-4 max-h-[350px] overflow-y-auto pr-1">
-                            {% for item in carrito.items %}
+                            {% for item in carrito['items'] %}
                                 <div class="flex justify-between items-start gap-4 text-sm border-b pb-3">
                                     <div>
                                         <p class="font-bold text-gray-800">{{ item.sku }}</p>

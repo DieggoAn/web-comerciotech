@@ -144,10 +144,10 @@ async def login(username: str = Form(...), password: str = Form(...)):
             else:
                 response = RedirectResponse(url="/user", status_code=303)
             
-            # Persistir detalles de sesión en cookies simples
-            response.set_cookie(key="session_user", value=username)
-            response.set_cookie(key="session_rol", value=rol)
-            response.set_cookie(key="session_client_id", value=str(id_cliente))
+            # Persistir detalles de sesión en cookies seguras HTTP-only
+            response.set_cookie(key="session_user", value=username, httponly=True)
+            response.set_cookie(key="session_rol", value=rol, httponly=True)
+            response.set_cookie(key="session_client_id", value=str(id_cliente), httponly=True)
             return response
         else:
             return RedirectResponse(url="/?error=auth_failed", status_code=303)
@@ -155,6 +155,16 @@ async def login(username: str = Form(...), password: str = Form(...)):
     except Exception as e:
         print(f"❌ Error durante el login: {e}")
         return RedirectResponse(url=f"/?error={str(e)}", status_code=303)
+
+# 🚪 CONTROLADOR DE LOGOUT
+@app.get("/logout", response_class=RedirectResponse)
+async def logout():
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie("session_user")
+    response.delete_cookie("session_rol")
+    response.delete_cookie("session_client_id")
+    print("🚪 Sesión cerrada, cookies eliminadas.")
+    return response
 
 # 💼 VISTA DE ADMINISTRADOR
 @app.get("/admin", response_class=HTMLResponse)

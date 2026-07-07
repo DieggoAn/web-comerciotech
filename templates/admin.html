@@ -15,7 +15,7 @@
                 ⚙️ ComercioTech <span class="bg-blue-800 text-xs px-2.5 py-1 rounded font-normal text-blue-200 uppercase tracking-widest">Admin Panel</span>
             </h1>
             <div class="flex items-center gap-4">
-                <a href="/" class="text-sm font-medium hover:text-gray-300 transition-colors flex items-center gap-1">
+                <a href="/logout" class="text-sm font-medium hover:text-gray-300 transition-colors flex items-center gap-1">
                     🚪 Cerrar Sesión
                 </a>
             </div>
@@ -59,9 +59,18 @@
                             <input type="text" name="categoria" required placeholder="Ej: Computadores" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Atributos (Subdocumento JSON flexible)</label>
-                            <textarea name="atributos" placeholder='{"marca": "Lenovo", "procesador": "Intel i5", "ram": "16GB"}' class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-sm font-mono h-24"></textarea>
-                            <p class="text-[10px] text-gray-400 mt-1">Ingresa un objeto JSON válido para guardar atributos flexibles.</p>
+                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Atributos del Producto</label>
+                            <input type="hidden" id="atributos_hidden" name="atributos" value="{}">
+                            
+                            <!-- Contenedor para filas de atributos dinámicos -->
+                            <div id="dynamic-attributes-container" class="space-y-2 mb-2">
+                                <!-- Las filas dinámicas se insertan por JS -->
+                            </div>
+                            
+                            <!-- Botón agregar atributo -->
+                            <button type="button" id="btn-add-attribute" class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-semibold px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition">
+                                ➕ Añadir Atributo
+                            </button>
                         </div>
                         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded transition text-sm shadow-sm mt-2">
                             💾 Guardar Catálogo & Sincronizar SQL
@@ -182,5 +191,68 @@
             {% endif %}
         </div>
     </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const container = document.getElementById("dynamic-attributes-container");
+            const btnAdd = document.getElementById("btn-add-attribute");
+            const form = document.querySelector('form[action="/guardar"]');
+            const hiddenInput = document.getElementById("atributos_hidden");
+
+            function createAttributeRow(key = "", value = "") {
+                const row = document.createElement("div");
+                row.className = "attribute-row grid grid-cols-[1fr_1fr_auto] gap-2 items-center";
+
+                const keyInput = document.createElement("input");
+                keyInput.type = "text";
+                keyInput.placeholder = "Nombre (ej: ram)";
+                keyInput.value = key;
+                keyInput.className = "attr-key px-2 py-1 text-xs border border-gray-300 rounded w-full focus:outline-none focus:border-blue-500 font-mono";
+
+                const valInput = document.createElement("input");
+                valInput.type = "text";
+                valInput.placeholder = "Valor (ej: 16GB)";
+                valInput.value = value;
+                valInput.className = "attr-val px-2 py-1 text-xs border border-gray-300 rounded w-full focus:outline-none focus:border-blue-500 font-mono";
+
+                const deleteBtn = document.createElement("button");
+                deleteBtn.type = "button";
+                deleteBtn.innerHTML = "❌";
+                deleteBtn.className = "text-red-500 hover:text-red-700 font-bold px-2 py-1 bg-red-50 hover:bg-red-100 border border-red-200 rounded text-xs transition active:scale-95";
+                deleteBtn.onclick = function() {
+                    row.remove();
+                };
+
+                row.appendChild(keyInput);
+                row.appendChild(valInput);
+                row.appendChild(deleteBtn);
+                container.appendChild(row);
+            }
+
+            // Agregar una fila inicial por defecto
+            createAttributeRow();
+
+            btnAdd.addEventListener("click", function() {
+                createAttributeRow();
+            });
+
+            form.addEventListener("submit", function(e) {
+                const rows = container.querySelectorAll(".attribute-row");
+                const attributes = {};
+                rows.forEach(row => {
+                    const keyInput = row.querySelector(".attr-key");
+                    const valInput = row.querySelector(".attr-val");
+                    if (keyInput && valInput) {
+                        const k = keyInput.value.trim();
+                        const v = valInput.value.trim();
+                        if (k) {
+                            attributes[k] = v;
+                        }
+                    }
+                });
+                hiddenInput.value = JSON.stringify(attributes);
+            });
+        });
+    </script>
 </body>
 </html>

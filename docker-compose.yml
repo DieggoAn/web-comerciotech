@@ -1,13 +1,13 @@
 version: '3.8'
 
 services:
-  comerciotech-nosql-v2:  # 👈 CORREGIDO: Se cambió _v2 por -v2
+  comerciotech-nosql-v2:
     image: mongo:7.0
     container_name: comerciotech_nosql_v2
     restart: always
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin_root
-      - MONGO_INITDB_ROOT_PASSWORD=SecretMongo2026*
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27017:27017"
     volumes:
@@ -22,7 +22,7 @@ services:
     container_name: comerciotech_sql
     restart: always
     environment:
-      - MYSQL_ROOT_PASSWORD=AdminComercio2026*
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -35,9 +35,17 @@ services:
     build: .
     container_name: comerciotech_app
     depends_on:
-      - comerciotech-nosql-v2  # 👈 Ahora sí coincide perfectamente
+      - comerciotech-nosql-v2
       - comerciotech-sql
     restart: always
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - MONGO_DB_NAME=${MONGO_DB_NAME}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DB=${MYSQL_DB}
+      - APP_SECRET_KEY=${APP_SECRET_KEY}
     ports:
       - "127.0.0.1:8080:8080"
     stdin_open: true

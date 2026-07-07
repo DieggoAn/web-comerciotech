@@ -62,6 +62,16 @@ CREATE TABLE cuentas_por_pagar (
     FOREIGN KEY (id_proveedor) REFERENCES proveedores(id_proveedor)
 );
 
+-- Tabla de Usuarios (Manejo de Autenticación con Bcrypt y Roles)
+CREATE TABLE usuarios (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    rol VARCHAR(20) NOT NULL,
+    id_cliente INT NULL,
+    FOREIGN KEY (id_cliente) REFERENCES clientes_financiero(id_cliente)
+);
+
 -- ------------------------------------------------------------------------------
 -- 2. CONTROL DE ACCESO BASADO EN ROLES (RBAC) Y SEGURIDAD
 -- Requisito del caso: Autenticación basada en roles (RBAC)
@@ -103,3 +113,11 @@ INSERT INTO facturas (id_cliente, monto_total, impuesto_iva, estado_pago) VALUES
 
 INSERT INTO cuentas_por_pagar (id_proveedor, nro_documento_prov, monto_deuda, fecha_vencimiento) VALUES 
 (1, 'FAC-99201', 850000.00, '2026-07-15');
+
+-- Semilla de usuarios autenticados con Bcrypt hashes
+-- 'admin' / 'admin123'
+-- 'user' / 'user123' (vinculado a id_cliente = 1)
+INSERT INTO usuarios (username, password_hash, rol, id_cliente) VALUES 
+('admin', '$2b$12$Eg1OXnhPpszF83KW/FPl/ObZdsRbZ7lX4bgfS7HcqX4sZ57nQDv1m', 'admin', NULL),
+('user', '$2b$12$UYBrnMfrLsVPH7mjNZZNW.C/Pqk/TawQ0eH97qQSu.uDGSTmyf5JO', 'usuario', 1)
+ON DUPLICATE KEY UPDATE username=username;

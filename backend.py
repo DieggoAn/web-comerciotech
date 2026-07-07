@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -7,25 +8,33 @@ from datetime import datetime
 import mysql.connector
 import json
 import os
+import bcrypt
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# 🔌 CONEXIONES A BASES DE DATOS
-MONGO_URI = "mongodb://srv_app_comerciotech:Python1!@comerciotech-nosql-v2:27017/comerciotech_catalogo?authSource=comerciotech_catalogo"
+# Helper to verify passwords against Bcrypt hashes
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+# 🔌 CONEXIONES A BASES DE DATOS DESDE VARIABLES DE ENTORNO
+MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
-db = client["comerciotech_catalogo"]
+db = client[os.getenv("MONGO_DB_NAME", "comerciotech_catalogo")]
 productos_collection = db["productos"]
 
 MYSQL_CONFIG = {
-    "host": "comerciotech-sql",
-    "user": "srv_app_sql",
-    "password": "AppSqlPass2026*",
-    "database": "comerciotech_financiero"
+    "host": os.getenv("MYSQL_HOST", "comerciotech-sql"),
+    "user": os.getenv("MYSQL_USER"),
+    "password": os.getenv("MYSQL_PASSWORD"),
+    "database": os.getenv("MYSQL_DB", "comerciotech_financiero")
 }
 
 # 🛠️ TRANSACCIÓN POLÍGLOTA: SIMULAR PAGO CHECKOUT
-def simular_pago_checkout(carrito_id: str):
+def simular_pago_checkout(carrito_id: str, id_cliente: int):
     # 1. Obtener carrito activo desde MongoDB
     carrito = db["carritos"].find_one({"_id": ObjectId(carrito_id), "estado": "activo"})
     if not carrito:
@@ -72,12 +81,10 @@ def simular_pago_checkout(carrito_id: str):
                 (nueva_cantidad, sku)
             )
             
-        # Obtener un cliente de facturación válido de MySQL
-        cursor.execute("SELECT id_cliente FROM clientes_financiero LIMIT 1")
-        cliente_res = cursor.fetchone()
-        if not cliente_res:
-            raise Exception("No hay clientes registrados en la tabla clientes_financiero de MySQL.")
-        id_cliente = cliente_res[0]
+        # Validar si el cliente de facturación existe en MySQL
+        cursor.execute("SELECT id_cliente FROM clientes_financiero WHERE id_cliente = %s", (id_cliente,))
+        if not cursor.fetchone():
+            raise Exception(f"El cliente con ID {id_cliente} no está registrado en la tabla clientes_financiero de MySQL.")
         
         # Registrar la factura
         cursor.execute(
@@ -114,20 +121,51 @@ def simular_pago_checkout(carrito_id: str):
 async def read_index(request: Request, error: str = None):
     return templates.TemplateResponse(request, "index.html", {"error": error})
 
-# 🔐 CONTROLADOR DE LOGIN CON BIFURCACIÓN DE ROL
+# 🔐 CONTROLADOR DE LOGIN CON BIFURCACIÓN DE ROL Y VERIFICACIÓN BCRYPT
 @app.post("/login", response_class=RedirectResponse)
 async def login(username: str = Form(...), password: str = Form(...)):
-    if username == "admin" and password == "admin123":
-        return RedirectResponse(url="/admin", status_code=303)
-    elif username == "user" and password == "user123":
-        return RedirectResponse(url="/user", status_code=303)
-    else:
-        return RedirectResponse(url="/?error=auth_failed", status_code=303)
+    try:
+        conn = mysql.connector.connect(**MYSQL_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT username, password_hash, rol, id_cliente FROM usuarios WHERE username = %s",
+            (username,)
+        )
+        user_row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if user_row and verify_password(password, user_row["password_hash"]):
+            rol = user_row["rol"]
+            id_cliente = user_row["id_cliente"] if user_row["id_cliente"] else ""
+            
+            if rol == "admin":
+                response = RedirectResponse(url="/admin", status_code=303)
+            else:
+                response = RedirectResponse(url="/user", status_code=303)
+            
+            # Persistir detalles de sesión en cookies simples
+            response.set_cookie(key="session_user", value=username)
+            response.set_cookie(key="session_rol", value=rol)
+            response.set_cookie(key="session_client_id", value=str(id_cliente))
+            return response
+        else:
+            return RedirectResponse(url="/?error=auth_failed", status_code=303)
+            
+    except Exception as e:
+        print(f"❌ Error durante el login: {e}")
+        return RedirectResponse(url=f"/?error={str(e)}", status_code=303)
 
 # 💼 VISTA DE ADMINISTRADOR
 @app.get("/admin", response_class=HTMLResponse)
 async def read_admin(request: Request):
     try:
+        # Verificar rol y usuario en la sesión de cookies
+        username = request.cookies.get("session_user")
+        rol = request.cookies.get("session_rol")
+        if not username or rol != "admin":
+            return RedirectResponse(url="/?error=unauthorized", status_code=303)
+
         # Traer catálogo completo de MongoDB
         productos_db = list(productos_collection.find())
         productos = []
@@ -188,6 +226,7 @@ async def read_admin(request: Request):
 # 💾 CREAR PRODUCTO (CON AUDITORÍA DE ESQUEMA MONGO & REGISTRO DE STOCK CRÍTICO SQL)
 @app.post("/guardar", response_class=RedirectResponse)
 async def guardar_producto(
+    request: Request,
     sku: str = Form(...),
     nombre: str = Form(...),
     precio: float = Form(...),
@@ -196,6 +235,12 @@ async def guardar_producto(
     atributos: str = Form(...)
 ):
     try:
+        # Validar sesión
+        username = request.cookies.get("session_user")
+        rol = request.cookies.get("session_rol")
+        if not username or rol != "admin":
+            return RedirectResponse(url="/?error=unauthorized", status_code=303)
+
         # Deserializar subdocumento atributos flexible (JSON)
         atributos_dict = {}
         if atributos.strip():
@@ -240,8 +285,14 @@ async def guardar_producto(
 
 # 🗑️ ELIMINAR PRODUCTO
 @app.post("/eliminar", response_class=RedirectResponse)
-async def eliminar_producto(sku: str = Form(...)):
+async def eliminar_producto(request: Request, sku: str = Form(...)):
     try:
+        # Validar sesión
+        username = request.cookies.get("session_user")
+        rol = request.cookies.get("session_rol")
+        if not username or rol != "admin":
+            return RedirectResponse(url="/?error=unauthorized", status_code=303)
+
         productos_collection.delete_one({"sku": sku})
         print(f"🗑️ Producto con SKU {sku} eliminado de MongoDB.")
         
@@ -272,6 +323,15 @@ async def read_user(
     checkout_error: str = None
 ):
     try:
+        # Validar sesión y recuperar información
+        username = request.cookies.get("session_user")
+        rol = request.cookies.get("session_rol")
+        client_id_str = request.cookies.get("session_client_id")
+        if not username or rol != "usuario":
+            return RedirectResponse(url="/?error=unauthorized", status_code=303)
+
+        id_cliente = int(client_id_str) if client_id_str else 1
+
         # Catálogo para usuario
         productos_db = list(productos_collection.find())
         productos = []
@@ -285,8 +345,7 @@ async def read_user(
                 "atributos": p.get("atributos", {})
             })
             
-        usuario_id = "usuario_estandar"
-        carrito = db["carritos"].find_one({"usuario_id": usuario_id, "estado": "activo"})
+        carrito = db["carritos"].find_one({"usuario_id": username, "estado": "activo"})
         carrito_items = []
         total_carrito = 0.0
         if carrito:
@@ -300,14 +359,14 @@ async def read_user(
                     "subtotal": subtotal
                 })
                 
-        # Obtener historial de compras del usuario en MySQL (id_cliente = 1)
+        # Obtener historial de compras del usuario en MySQL
         compras = []
         try:
             conn = mysql.connector.connect(**MYSQL_CONFIG)
             cursor = conn.cursor(dictionary=True)
             cursor.execute(
                 "SELECT nro_factura, monto_total, impuesto_iva, fecha_emision, estado_pago FROM facturas WHERE id_cliente = %s ORDER BY fecha_emision DESC",
-                (1,)
+                (id_cliente,)
             )
             rows = cursor.fetchall()
             for r in rows:
@@ -348,9 +407,14 @@ async def read_user(
 
 # 🛒 AGREGAR AL CARRITO DE COMPRAS MONGO
 @app.post("/carrito/agregar", response_class=RedirectResponse)
-async def agregar_al_carrito(sku: str = Form(...), precio: float = Form(...)):
+async def agregar_al_carrito(request: Request, sku: str = Form(...), precio: float = Form(...)):
     try:
-        usuario_id = "usuario_estandar"
+        # Validar sesión
+        usuario_id = request.cookies.get("session_user")
+        rol = request.cookies.get("session_rol")
+        if not usuario_id or rol != "usuario":
+            return RedirectResponse(url="/?error=unauthorized", status_code=303)
+
         carrito = db["carritos"].find_one({"usuario_id": usuario_id, "estado": "activo"})
         
         if not carrito:
@@ -401,9 +465,14 @@ async def agregar_al_carrito(sku: str = Form(...), precio: float = Form(...)):
 
 # 🗑️ VACIAR CARRITO
 @app.post("/carrito/vaciar", response_class=RedirectResponse)
-async def vaciar_carrito():
+async def vaciar_carrito(request: Request):
     try:
-        usuario_id = "usuario_estandar"
+        # Validar sesión
+        usuario_id = request.cookies.get("session_user")
+        rol = request.cookies.get("session_rol")
+        if not usuario_id or rol != "usuario":
+            return RedirectResponse(url="/?error=unauthorized", status_code=303)
+
         db["carritos"].delete_one({"usuario_id": usuario_id, "estado": "activo"})
         print(f"🗑️ Carrito vaciado.")
     except Exception as e:
@@ -413,10 +482,19 @@ async def vaciar_carrito():
 
 # 💳 PROCESAR FACTURACIÓN Y CHECKOUT AUTOMÁTICO (USUARIO)
 @app.post("/user/checkout", response_class=RedirectResponse)
-async def user_checkout(carrito_id: str = Form(...)):
+async def user_checkout(request: Request, carrito_id: str = Form(...)):
     try:
+        # Validar sesión y recuperar ID cliente
+        username = request.cookies.get("session_user")
+        rol = request.cookies.get("session_rol")
+        client_id_str = request.cookies.get("session_client_id")
+        if not username or rol != "usuario":
+            return RedirectResponse(url="/?error=unauthorized", status_code=303)
+
+        id_cliente = int(client_id_str) if client_id_str else 1
+
         # Iniciar checkout con la lógica políglota transaccional
-        resultado = simular_pago_checkout(carrito_id)
+        resultado = simular_pago_checkout(carrito_id, id_cliente)
         nro = resultado["nro_factura"]
         monto = resultado["monto_total"]
         iva = resultado["impuesto_iva"]

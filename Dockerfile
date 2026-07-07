@@ -9,7 +9,8 @@ RUN pip install --no-cache-dir \
     uvicorn==0.30.6 \
     jinja2==3.1.4 \
     python-multipart==0.0.9 \
-    mysql-connector-python==8.0.33
+    mysql-connector-python==8.0.33 \
+    bcrypt==4.1.2
 
 COPY backend.py /app/
 COPY templates/ /app/templates/

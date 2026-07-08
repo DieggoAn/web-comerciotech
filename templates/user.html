@@ -88,11 +88,17 @@
                                 </div>
                                 
                                 <div class="mt-5 pt-3 border-t border-gray-100">
-                                    <form action="/carrito/agregar" method="POST">
+                                    <form action="/carrito/agregar" method="POST" class="flex items-center gap-2">
                                         <input type="hidden" name="sku" value="{{ producto.sku }}">
                                         <input type="hidden" name="precio" value="{{ producto.precio }}">
-                                        <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
-                                            🛒 Agregar al Carrito
+                                        
+                                        <!-- Input de cantidad -->
+                                        <div class="w-20">
+                                            <input type="number" name="cantidad" value="1" min="1" required class="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:border-teal-500 text-center font-semibold text-gray-800">
+                                        </div>
+                                        
+                                        <button type="submit" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 rounded transition-colors text-sm shadow-sm flex items-center justify-center gap-1.5 active:scale-95">
+                                            🛒 Agregar
                                         </button>
                                     </form>
                                 </div>

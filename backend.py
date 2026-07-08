@@ -13,14 +13,12 @@ import bcrypt
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# Helper to verify passwords against Bcrypt hashes
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
     except Exception:
         return False
 
-# 🔌 CONEXIONES A BASES DE DATOS DESDE VARIABLES DE ENTORNO
 MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client[os.getenv("MONGO_DB_NAME", "comerciotech_catalogo")]
@@ -33,9 +31,8 @@ MYSQL_CONFIG = {
     "database": os.getenv("MYSQL_DB", "comerciotech_financiero")
 }
 
-# 🛠️ TRANSACCIÓN POLÍGLOTA: SIMULAR PAGO CHECKOUT
 def simular_pago_checkout(carrito_id: str, id_cliente: int):
-    # 1. Obtener carrito activo desde MongoDB
+
     carrito = db["carritos"].find_one({"_id": ObjectId(carrito_id), "estado": "activo"})
     if not carrito:
         raise Exception("El carrito especificado no existe o no está activo.")
@@ -50,14 +47,11 @@ def simular_pago_checkout(carrito_id: str, id_cliente: int):
         
     impuesto_iva = monto_total * 0.19
 
-    # 2. Iniciar Transacción ACID en MySQL
     conn = mysql.connector.connect(**MYSQL_CONFIG)
     cursor = conn.cursor()
     try:
-        # Iniciar transacción manual desactivando autocommit
         conn.autocommit = False
         
-        # Bloquear y comprobar stock de inventario_critico (FOR UPDATE)
         for item in items:
             sku = item["sku"]
             cantidad_requerida = item["cantidad"]
@@ -74,29 +68,33 @@ def simular_pago_checkout(carrito_id: str, id_cliente: int):
             if cantidad_actual < cantidad_requerida:
                 raise Exception(f"Stock insuficiente para SKU '{sku}' en MySQL. Requerido: {cantidad_requerida}, Disponible: {cantidad_actual}.")
                 
-            # Descontar stock
             nueva_cantidad = cantidad_actual - cantidad_requerida
             cursor.execute(
                 "UPDATE inventario_critico SET cantidad_bodega = %s WHERE sku = %s",
                 (nueva_cantidad, sku)
             )
             
-        # Validar si el cliente de facturación existe en MySQL
         cursor.execute("SELECT id_cliente FROM clientes_financiero WHERE id_cliente = %s", (id_cliente,))
         if not cursor.fetchone():
             raise Exception(f"El cliente con ID {id_cliente} no está registrado en la tabla clientes_financiero de MySQL.")
         
-        # Registrar la factura
         cursor.execute(
             "INSERT INTO facturas (id_cliente, monto_total, impuesto_iva, estado_pago) VALUES (%s, %s, %s, 'PAGADO')",
             (id_cliente, monto_total, impuesto_iva)
         )
         nro_factura = cursor.lastrowid
         
-        # Guardar cambios en MySQL
         conn.commit()
         
-        # 3. Si MySQL es exitoso, actualizar estado del carrito a 'convertido' en MongoDB
+        # 3. Si MySQL es exitoso, actualizar stock de productos y estado del carrito a 'convertido' en MongoDB
+        for item in items:
+            sku = item["sku"]
+            cantidad_requerida = item["cantidad"]
+            db["productos"].update_one(
+                {"sku": sku},
+                {"$inc": {"stock": -cantidad_requerida}}
+            )
+
         db["carritos"].update_one(
             {"_id": ObjectId(carrito_id)},
             {"$set": {"estado": "convertido", "actualizado_en": datetime.utcnow()}}
@@ -121,7 +119,6 @@ def simular_pago_checkout(carrito_id: str, id_cliente: int):
 async def read_index(request: Request, error: str = None):
     return templates.TemplateResponse(request, "index.html", {"error": error})
 
-# 🔐 CONTROLADOR DE LOGIN CON BIFURCACIÓN DE ROL Y VERIFICACIÓN BCRYPT
 @app.post("/login", response_class=RedirectResponse)
 async def login(username: str = Form(...), password: str = Form(...)):
     try:
@@ -144,7 +141,6 @@ async def login(username: str = Form(...), password: str = Form(...)):
             else:
                 response = RedirectResponse(url="/user", status_code=303)
             
-            # Persistir detalles de sesión en cookies seguras HTTP-only
             response.set_cookie(key="session_user", value=username, httponly=True)
             response.set_cookie(key="session_rol", value=rol, httponly=True)
             response.set_cookie(key="session_client_id", value=str(id_cliente), httponly=True)
@@ -153,7 +149,7 @@ async def login(username: str = Form(...), password: str = Form(...)):
             return RedirectResponse(url="/?error=auth_failed", status_code=303)
             
     except Exception as e:
-        print(f"❌ Error durante el login: {e}")
+        print(f"Error durante el login: {e}")
         return RedirectResponse(url=f"/?error={str(e)}", status_code=303)
 
 # 🚪 CONTROLADOR DE LOGOUT
@@ -417,7 +413,7 @@ async def read_user(
 
 # 🛒 AGREGAR AL CARRITO DE COMPRAS MONGO
 @app.post("/carrito/agregar", response_class=RedirectResponse)
-async def agregar_al_carrito(request: Request, sku: str = Form(...), precio: float = Form(...)):
+async def agregar_al_carrito(request: Request, sku: str = Form(...), precio: float = Form(...), cantidad: int = Form(1)):
     try:
         # Validar sesión
         usuario_id = request.cookies.get("session_user")
@@ -435,7 +431,7 @@ async def agregar_al_carrito(request: Request, sku: str = Form(...), precio: flo
                 "items": [
                     {
                         "sku": sku,
-                        "cantidad": 1,
+                        "cantidad": cantidad,
                         "precio_capturado": float(precio),
                         "añadido_en": datetime.utcnow()
                     }
@@ -447,14 +443,14 @@ async def agregar_al_carrito(request: Request, sku: str = Form(...), precio: flo
             found = False
             for item in items:
                 if item["sku"] == sku:
-                    item["cantidad"] += 1
+                    item["cantidad"] += cantidad
                     item["añadido_en"] = datetime.utcnow()
                     found = True
                     break
             if not found:
                 items.append({
                     "sku": sku,
-                    "cantidad": 1,
+                    "cantidad": cantidad,
                     "precio_capturado": float(precio),
                     "añadido_en": datetime.utcnow()
                 })
@@ -473,20 +469,19 @@ async def agregar_al_carrito(request: Request, sku: str = Form(...), precio: flo
         
     return RedirectResponse(url="/user", status_code=303)
 
-# 🗑️ VACIAR CARRITO
+
 @app.post("/carrito/vaciar", response_class=RedirectResponse)
 async def vaciar_carrito(request: Request):
     try:
-        # Validar sesión
         usuario_id = request.cookies.get("session_user")
         rol = request.cookies.get("session_rol")
         if not usuario_id or rol != "usuario":
             return RedirectResponse(url="/?error=unauthorized", status_code=303)
 
         db["carritos"].delete_one({"usuario_id": usuario_id, "estado": "activo"})
-        print(f"🗑️ Carrito vaciado.")
+        print(f" Carrito vaciado.")
     except Exception as e:
-        print(f"❌ Error al vaciar el carrito: {e}")
+        print(f" Error al vaciar el carrito: {e}")
         
     return RedirectResponse(url="/user", status_code=303)
 

@@ -1,14 +1,20 @@
-// 1. Conectarse y autenticarse en la base administrativa
+// 1. Obtener credenciales desde variables de entorno
+var rootUser = process.env.MONGO_INITDB_ROOT_USERNAME;
+var rootPassword = process.env.MONGO_INITDB_ROOT_PASSWORD;
+var appUser = process.env.MONGO_APP_USER;
+var appPassword = process.env.MONGO_APP_PASSWORD;
+
+// Conectarse y autenticarse en la base administrativa
 var adminDB = db.getSiblingDB('admin');
-adminDB.auth('admin_root', 'SecretMongo2026*');
+adminDB.auth(rootUser, rootPassword);
 
 // 2. Definir e inicializar la base de datos del proyecto de forma limpia
 var dbProyecto = db.getSiblingDB('comerciotech_catalogo');
 
 // 3. Crear el usuario del servicio para la App de Python con FastAPI
 dbProyecto.createUser({
-    user: 'srv_app_comerciotech',
-    pwd: 'Python1!',
+    user: appUser,
+    pwd: appPassword,
     roles: [
         { role: 'readWrite', db: 'comerciotech_catalogo' }
     ]

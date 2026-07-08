@@ -16,6 +16,12 @@ services:
     command: [ "--auth" ]
     networks:
       - comerciotech_net
+    deploy:
+      resources:
+        limits:
+          memory: 2.7G
+        reservations:
+          memory: 1.5G
 
   comerciotech-sql:
     image: mysql:8.0
@@ -30,6 +36,12 @@ services:
       - ./scripts-sql:/docker-entrypoint-initdb.d:ro
     networks:
       - comerciotech_net
+    deploy:
+      resources:
+        limits:
+          memory: 2.0G
+        reservations:
+          memory: 1.0G
 
   comerciotech_app:
     build: .
